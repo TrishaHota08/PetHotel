@@ -1,0 +1,189 @@
+﻿@page "/cats/newcat"
+@using PetHotelData;
+@using CatPetHotelApp.Model;
+@using PetHotelDomain;
+
+@inject IPetHotelDataAccess _context;
+
+
+@if (!Saved)
+{
+<section class="cat-edit">
+    <h1 class="page-title">Details for @newCat.CatName</h1>
+    <h2 class="@StatusClass">@Message</h2>
+    <EditForm Model="@newCat" OnValidSubmit="@InsertNewCat">
+    <DataAnnotationsValidator/>
+    <ValidationSummary/>
+    <div class="row mb-3">
+        <label for="image" class="col-12 col-sm-3">Select image: </label>
+        <div class="col-md-8">
+            <InputFile id="file" @bind-Value="newCat.Photo" OnChange="OnInputFileChange" />
+            <ValidationMessage For="@(()=> newCat.Photo)"/>
+        </div>
+
+    </div>
+    <div class="row mb-3">
+        <label for="CatName" class="col-form-label col-md-3">Cat Name: </label>
+         <div class="col-md-8">
+            <InputText id="CatName" class="form-control col-md-8" @bind-Value="newCat.CatName" placeholder="Enter Cat's name" />
+            </div>
+        <ValidationMessage class="offset-md-3 col-md-8" For="@(() => newCat.CatName)" />
+            </div>
+
+    <div class="row mb-3">
+        <label for="Description" class="col-form-label col-md-3">Description: </label>
+        <div class="col-md-8">
+            <InputText id="Description" @bind-Value="newCat.Description" placeholder="Enter Cat's description" />
+        </div>
+        <ValidationMessage class="offset-md-3 col-md-8" For="@(() => newCat.Description)" />
+    </div>
+
+    <div class="row mb-3">
+        <label for="OwnerName" class="col-form-label col-md-3">Owner Name: </label>
+        <div class="col-md-8">
+            <InputText id="OwnerName" @bind-Value="newCat.ownerName" placeholder="Enter Cat owner's name'" />
+        </div>
+        <ValidationMessage class="offset-md-3 col-md-8" For="@(() => newCat.ownerName)" />
+    </div>
+
+     <div class="row mb-3">
+        <label for="OwnerPhoneNumber" class="col-form-label col-md-3">Owner PhoneNumber: </label>
+        <div class="col-md-8">
+            <InputText id="OwnerPhoneNumber" @bind-Value="newCat.ownerPhone" placeholder="Enter Cat owner's phone number'" />
+     </div>
+        <ValidationMessage class="offset-md-3 col-md-8" For="@(() => newCat.ownerPhone)" />
+    </div>
+
+    <div class="row mb-3">
+        <label for="Owneremailid" class="col-form-label col-md-3">Owner emailid: </label>
+                <div class="col-md-8">
+        <InputText id="Owneremailid" @bind-Value="newCat.ownerEmail" placeholder="Enter Cat owner's emaid id'" />
+        </div>
+        <ValidationMessage class="offset-md-3 col-md-8" For="@(() => newCat.ownerEmail)" />
+    </div>
+
+    <div class="row mb-3">
+        <label for="ArrivalDate Time" class="col-form-label col-md-3">Arrival Date: </label>
+        <div class="col-md-8">
+            <InputDate id="ArrivalDate" class="form-control col-md-8" @bind-Value="newCat.ArrivalDate" placeholder="Enter Arrival Date"></InputDate>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <label for="DepartureDate" class="col-form-label col-md-3">Departure Date: </label>
+        <div class="col-md-8">
+            <InputDate id="DepartureDate" class="form-control col-md-8" @bind-Value="newCat.EstimatedDepartureDate" placeholder="Enter Departure Date"></InputDate>
+        </div>
+     </div>
+
+     <div class="row mb-3">
+        <label for="CageLocation" class="col-form-label col-md-3">Cage Location: </label>
+        <div class="col-md-8">
+                <InputSelect id="CageLocation" class="form-select col-md-8" @bind-Value=@newCat.CageLocation>
+                
+                    <option value="">Select an option</option>
+                    @foreach (var cage in avaialableCages)
+                    {
+                        <option value="@(cage)" >@cage</option>
+                    }
+                </InputSelect>
+            </div>
+            <ValidationMessage class="offset-md-3 col-md-8" For="@(() => newCat.CageLocation)" />
+        </div>
+        <button type="submit"class="btn btn-primary">Save Cat</button>
+    </EditForm>
+        <button type="button" class="btn btn-outline-primary" @onclick="@NavigateToHome">Back to Home</button>
+</section>
+}
+else
+{
+    <div class="alert @StatusClass">@Message</div>
+    <button type="button" class="btn btn-outline-primary" @onclick="@NavigateToHome">Back to Home</button>
+}
+
+@code {
+    [Inject]
+    private NavigationManager NavigationManager { get; set; }
+
+    private DisplayCatModel newCat = new DisplayCatModel();
+    private IBrowserFile selectedFile;
+    protected string Message = string.Empty;
+    protected string StatusClass = string.Empty;
+    List<string> avaialableCages = new List<string>();
+    protected bool Saved;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Saved = false;
+        StatusClass = "alert-success";
+        //adding default values
+        newCat = new DisplayCatModel { ArrivalDate = DateTime.Now, EstimatedDepartureDate = DateTime.Now.AddDays(1) };
+        await GetAvailableCages();
+
+    }
+    private async Task InsertNewCat()
+    {
+        Saved = false;
+        if (selectedFile != null)
+        {
+            var file = selectedFile;
+            Stream stream = file.OpenReadStream();
+            MemoryStream memStream = new();
+            await stream.CopyToAsync(memStream);
+            stream.Close();
+
+            newCat.Photo = memStream.ToArray();
+        }
+        Cats cat = new Cats()
+            {
+                CatName = newCat.CatName,
+                Description = newCat.Description,
+                ownerName = newCat.ownerName,
+                ownerPhone = newCat.ownerPhone,
+                ownerEmail = newCat.ownerEmail,
+                ArrivalDate = newCat.ArrivalDate,
+                EstimatedDepartureDate = newCat.EstimatedDepartureDate,
+                CageLocation = newCat.CageLocation,
+                Photo = newCat.Photo
+            };
+        var AddedCat = await _context.AddCats(cat);
+        if (AddedCat != null)
+        {
+            newCat = new DisplayCatModel();
+            StatusClass = "alert-success";
+            Message = "New Cat added successfully";
+            Saved = true;
+
+        }
+        else
+        {
+            StatusClass = "alert-danger";
+            Message = "Something went wrong adding the new employee. Please try again.";
+            Saved = false;
+        }
+    }
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        StateHasChanged();
+    }
+
+    private async Task GetAvailableCages()
+    {
+       
+        var occupiedCages =await _context.FindOccupiedCage();
+        foreach (var cage in @Enum.GetValues(typeof(Cages)))
+        {
+            if(!occupiedCages.Contains(cage.ToString()))
+            {
+                avaialableCages.Add(cage.ToString());
+            }
+        }
+    }
+
+    protected void NavigateToHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+}

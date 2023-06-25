@@ -1,0 +1,123 @@
+﻿@page "/cats/Details"
+
+@using PetHotelData;
+@using PetHotelDomain;
+
+@inject IPetHotelDataAccess _catsDB
+
+
+<h1>Cats Details Page</h1>
+
+<h4>Current Residing Cats</h4>
+
+    @if (cats is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+    <div class=@StatusClass>
+        <h6 id="Status Message" >@Message</h6>
+    </div>
+        <table class=" table table-striped">
+            <thead>
+                <tr>
+                    <th>Cat Name</th>
+                    <th>Cat Description</th>
+                    <th>Owner Name</th>
+                    <th>Owner Phone Number</th>
+                    <th>Cage Location</th>
+                    <th>Arrival Time</th>
+                    <th>Departure Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var (cat, index) in cats.Select((cat, index) => (cat, index)))
+                {
+                    <tr @onclick="() => {SelectRow(index);ShowDeletePopup(cat.CatsId);}" class="@((index == selectedRowIndex) ? "selected-row" : "")">
+                        <td>@cat.CatName</td>
+                        <td>@cat.Description</td>
+                        <td>@cat.ownerName</td>
+                        <td>@cat.ownerPhone</td>
+                        <td>@cat.CageLocation</td>
+                        <td>@cat.ArrivalDate</td>
+                        <td>@cat.EstimatedDepartureDate</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (showDeletePopup)
+        {
+            <div class="delete-popup">
+                <p>Are you sure you want to delete this cat?</p>
+                <button class="btn btn-danger" @onclick="DeleteSelectedCat">Delete</button>
+                <button class="btn btn-secondary" @onclick="HideDeletePopup">Cancel</button>
+            </div>
+        }
+
+    <button type="button" class="btn btn-outline-primary" @onclick="@NavigateToHome">Back to Home</button>
+    }
+
+
+@code{
+    [Inject]
+    private NavigationManager NavigationManager { get; set; }
+
+    private List<Cats> cats;
+    private int deleteCatId;
+    private bool showDeletePopup;
+    private int selectedRowIndex = -1;
+    private List<Cats> updatedCats;
+    protected string Message = string.Empty;
+    protected string StatusClass = string.Empty;
+    protected bool SavedChanges;
+
+    protected override async Task OnInitializedAsync()
+    {
+        StatusClass = "hidden-element";
+        SavedChanges = false;
+        cats = await _catsDB.GetAllCats();
+    }
+
+    public async Task DeleteSelectedCat()
+    {
+        StatusClass = "alert-success";
+        updatedCats = await _catsDB.DeleteCat(deleteCatId);
+        showDeletePopup = false;
+        Message = "Delete operation successful...";
+        if (updatedCats.Count != 0)
+        {
+            RefreshTable();
+        }
+    }
+
+    private void ShowDeletePopup(int catId)
+    {
+        deleteCatId = catId;
+        showDeletePopup = true;
+    }
+
+    private void HideDeletePopup()
+    {
+        showDeletePopup = false;
+        selectedRowIndex = -1;
+    }
+
+    private void SelectRow(int rowIndex)
+    {
+        selectedRowIndex = rowIndex;
+    }
+
+    protected async Task  RefreshTable()
+    {
+        cats = await _catsDB.GetAllCats();
+        StateHasChanged();
+        StatusClass = "hidden-element";
+    }
+    protected void NavigateToHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+}
